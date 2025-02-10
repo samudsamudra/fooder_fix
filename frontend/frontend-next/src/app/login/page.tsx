@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 
@@ -12,7 +12,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); // Reset error sebelum request baru
+    setError("");
 
     try {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/login`, {
@@ -20,11 +20,15 @@ export default function LoginPage() {
         password,
       });
 
-      console.log("Login successful:", response.data);
+      console.log("Login response:", response.data);
 
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
-        router.push("/dashboard");
+
+        console.log("Token stored:", localStorage.getItem("token"));
+
+        // ✅ Setelah login berhasil, ambil data user
+        fetchUserData();
       } else {
         setError("Login berhasil, tetapi token tidak ditemukan.");
       }
@@ -32,6 +36,32 @@ export default function LoginPage() {
       console.error("Login failed:", err);
       const errorMessage = err.response?.data?.message || "Email atau password salah";
       setError(errorMessage);
+    }
+  };
+
+  // ✅ Fungsi untuk mengambil data user berdasarkan token
+  const fetchUserData = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found!");
+      return;
+    }
+
+    try {
+      const userResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/user/get-user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("User data fetched:", userResponse.data);
+
+      // Simpan data user ke localStorage atau state global (misal Redux)
+      localStorage.setItem("user", JSON.stringify(userResponse.data));
+
+      // **Redirect ke dashboard setelah user ditemukan**
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("Fetching user failed:", err);
+      setError("Gagal mengambil data user.");
     }
   };
 
@@ -70,12 +100,6 @@ export default function LoginPage() {
             Login
           </button>
         </form>
-        <p className="text-center text-white mt-4">
-          Don't have an account?{" "}
-          <a href="/register" className="underline hover:text-gray-200">
-            Sign up
-          </a>
-        </p>
       </div>
     </div>
   );

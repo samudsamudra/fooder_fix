@@ -9,19 +9,29 @@ export default function RegisterPage() {
   const [password, setPassword] = useState<string>("");
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [error, setError] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>(""); // ✅ State untuk notifikasi sukses
+  const [successMessage, setSuccessMessage] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false); // ✅ Loading state
   const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setProfilePic(e.target.files[0]);
+      const file = e.target.files[0];
+
+      // ✅ Validasi ukuran file maksimal 2MB
+      if (file.size > 2 * 1024 * 1024) {
+        setError("Ukuran file terlalu besar! Maksimal 2MB.");
+        return;
+      }
+
+      setProfilePic(file);
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
-    setSuccessMessage(""); // Reset notifikasi sebelum request baru
+    setSuccessMessage("");
+    setLoading(true); // ✅ Aktifkan loading state
 
     const formData = new FormData();
     formData.append("email", email);
@@ -31,7 +41,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await axios.post(
+      const response = await axios.post<{ message: string }>(
         `${process.env.NEXT_PUBLIC_API_URL}/user/register`,
         formData,
         {
@@ -44,14 +54,19 @@ export default function RegisterPage() {
       console.log("Registration successful:", response.data);
       setSuccessMessage("Registrasi berhasil! Mengarahkan ke halaman login...");
 
-      // ✅ Tunggu 2 detik sebelum redirect ke login
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Registration failed:", err);
-      const errorMessage = err.response?.data?.message || "Pendaftaran gagal";
-      setError(errorMessage);
+
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Pendaftaran gagal");
+      } else {
+        setError("Terjadi kesalahan yang tidak diketahui.");
+      }
+    } finally {
+      setLoading(false); // ✅ Nonaktifkan loading state
     }
   };
 
@@ -60,12 +75,7 @@ export default function RegisterPage() {
       <div className="bg-white/10 backdrop-blur-lg shadow-lg rounded-lg p-8 max-w-md w-full border border-white/20">
         <h2 className="text-3xl font-bold text-white text-center mb-6">Create an Account</h2>
 
-        {/* ✅ Notifikasi sukses */}
-        {successMessage && (
-          <p className="text-green-400 text-center mb-4">{successMessage}</p>
-        )}
-
-        {/* ✅ Notifikasi error */}
+        {successMessage && <p className="text-green-400 text-center mb-4">{successMessage}</p>}
         {error && <p className="text-red-400 text-center mb-4">{error}</p>}
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -92,9 +102,10 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-white text-sm font-medium">Profile Picture</label>
+            <label className="block text-white text-sm font-medium">Profile Picture (Max: 2MB)</label>
             <input
               type="file"
+              accept="image/*"
               title="Profile Picture"
               onChange={handleFileChange}
               className="w-full px-3 py-2 mt-1 rounded-md bg-white/20 border border-white/30 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-white/50"
@@ -102,9 +113,12 @@ export default function RegisterPage() {
           </div>
           <button
             type="submit"
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-2 rounded-md transition-all duration-300 shadow-md"
+            className={`w-full ${
+              loading ? "bg-gray-400" : "bg-white/20 hover:bg-white/30"
+            } text-white font-semibold py-2 rounded-md transition-all duration-300 shadow-md`}
+            disabled={loading}
           >
-            Register
+            {loading ? "Processing..." : "Register"}
           </button>
         </form>
       </div>

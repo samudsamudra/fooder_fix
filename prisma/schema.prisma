@@ -1,0 +1,107 @@
+// prisma/schema.prisma
+
+// Generator client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Data source, silakan sesuaikan dengan environment variable MySQL kamu
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Definisikan enum untuk role
+enum Role {
+  MANAGER
+  KASIR
+}
+
+// Definisikan enum untuk kategori (food, drink, snack)
+enum Category {
+  FOOD
+  DRINK
+  SNACK
+}
+
+// Definisikan enum untuk metode pembayaran (cash, qris)
+enum Payment {
+  CASH
+  QRIS
+}
+
+// Definisikan enum untuk status (new, paid, done)
+enum Status {
+  NEW
+  PAID
+  DONE
+}
+
+// Model untuk user
+model User {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default("") // misal untuk 7 digit random, bisa handle via code
+  role        Role
+  password    String   @default("")
+  email       String   @unique
+  profilePic  String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // relasi satu user bisa punya banyak order
+  orders      Order[]
+}
+
+// Model untuk menu
+model Menu {
+  id          Int         @id @default(autoincrement())
+  uuid        String      @unique @default("")
+  name        String      @default("")
+  price       Int         @default(0)
+  category    Category    @default(FOOD)
+  picture     String?     @default("")
+  description String      @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // relasi ke OrderList
+  orderLists  OrderList[]
+}
+
+// Model untuk order
+model Order {
+  id             Int         @id @default(autoincrement())
+  uuid           String      @unique @default("")
+  customer       String      @default("")
+  table_number   String      @default("")
+  total_price    Int         @default(0)
+  payment_method Payment     @default(CASH)
+  status         Status      @default(NEW)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // relasi ke OrderList
+  orderLists     OrderList[]
+
+  // relasi many-to-one ke User (satu user bisa banyak order)
+  User           User?       @relation(fields: [userId], references: [id])
+  userId         Int?
+}
+
+// Model untuk detail order (OrderList)
+model OrderList {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default("")
+  quantity  Int      @default(0)
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relasi ke Menu
+  Menu      Menu?    @relation(fields: [menuId], references: [id])
+  menuId    Int?
+
+  // relasi ke Order
+  Order     Order?   @relation(fields: [orderId], references: [id])
+  orderId   Int?
+}

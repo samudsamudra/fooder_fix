@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest as NextApiRequestBase, NextApiResponse } from "next";
 import prisma from "../../../../prisma/client";
 import { Role } from "@prisma/client";
 import bcrypt from "bcrypt";
@@ -7,6 +7,11 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import Cors from "cors";
+
+// Extend NextApiRequest to include file property
+interface NextApiRequest extends NextApiRequestBase {
+  file?: Express.Multer.File;
+}
 
 // Konfigurasi Multer untuk upload file
 const upload = multer({

@@ -62,6 +62,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Generated Token:', token); // Log the generated token for debugging
 
+    // Set the token as a cookie
+    res.setHeader('Set-Cookie', `token=${token}; Path=/; Max-Age=3600`);
+
     return res.status(200).json({
       message: 'Login successful',
       token,
